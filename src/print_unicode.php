@@ -1,21 +1,36 @@
 <?php
+/**
+ *
+ */
+error_reporting(-1);
+ini_set('display_errors', 'On');
 
 $saveToFile = isset($_GET['toFile']) ? $_GET['toFile'] : false;
 $print = isset($_GET['print']) ? $_GET['print'] : true;
 $startLimit = isset($_GET['start']) ? $_GET['start'] : 0x10000;
-$unicodeList = include_once("unicodeCharList.php"); 
-$represented = [];
+$unicodeList = include_once("../config/unicodeCharList.php");
 
+$ranges = include_once("../config/ranges.php");
+$excludedRanges = [0, 1, 15, 16];
+
+$represented = [];
 foreach($unicodeList as $unicodeNo => $unicodeText) {
     if ($unicodeNo < $startLimit) continue;
+    if ($unicodeNo >= 0xE007F) continue;
+    foreach ($excludedRanges as $excludedRange) {
+        if ($unicodeNo <= $ranges[$excludedRange][1] && $unicodeNo >= $ranges[$excludedRange][0]) {
+            continue 2;
+        }
+    }
+
     $represented[] = "\"" . utf8_chr($unicodeNo) . "\",";
+
     if (!$print) continue;
 ?>
     <div id="<?php echo $unicodeNo;?>">
       <?php 
        echo utf8_chr($unicodeNo) . $unicodeText;
       ?>
-          
     </div>
 <?php
 }
@@ -25,7 +40,7 @@ if ($saveToFile) {
     $data .= "return [\n";
     $data .= implode("\n", $represented);
     $data .= "];\n";
-    file_put_contents("blacklistArray.php", $data);
+    file_put_contents("../output/blacklistArray.php", $data);
 }
 
 function utf8_chr($cp) {
